@@ -27,8 +27,8 @@
 //
 // NYILATKOZAT
 // ---------------------------------------------------------------------------------------------
-// Nev    : <VEZETEKNEV(EK)> <KERESZTNEV(EK)>
-// Neptun : <NEPTUN KOD>
+// Nev    : Takacs Robert
+// Neptun : QECX4A
 // ---------------------------------------------------------------------------------------------
 // ezennel kijelentem, hogy a feladatot magam keszitettem, es ha barmilyen segitseget igenybe vettem vagy 
 // mas szellemi termeket felhasznaltam, akkor a forrast es az atvett reszt kommentekben egyertelmuen jeloltem. 
@@ -110,6 +110,10 @@ struct Vector {
 	float operator*(const Vector& v) { 	// dot product
 		return (x * v.x + y * v.y + z * v.z);
 	}
+	float operator/(const Vector& v) {
+		return (x / v.x + y / v.y + z / v.z);
+	}
+
 	Vector operator%(const Vector& v) { 	// cross product
 		return Vector(y*v.z - z*v.y, z*v.x - x*v.z, x*v.y - y*v.x);
 	}
@@ -166,32 +170,37 @@ struct Color {
 
 struct ControlPoint{
 	Vector pos;
-	Vector velocity = Vector();
-	Vector acceleration = Vector();
-	long time;
+	Vector velocity;
+	Vector acceleration;
+	float time;
 
 	ControlPoint(){
-
+		velocity = Vector();
+		acceleration = Vector();
 
 	}
 
-	ControlPoint(Vector pos, long time){
+	ControlPoint(Vector pos, float time){
 		this->pos = Vector(pos.x, pos.y, 0.0f);
 		this->time = time;
 	}
 
 
 };
-
+enum MouseStates{
+	B0CLK,
+	B1CLK,
+	B2CLK,
+	B3CLK,
+	mouseMoving,
+};
 
 struct Mouse{
-	enum mouseStates{
-		B0CLK,
-		B1CLK,
-		B2CLK,
-		B3CLK,
-		mouseMoving,
-	} mouseStates;
+	MouseStates mouseStates;
+	Mouse(){
+		mouseStates = B0CLK;
+
+	}
 
 	void mouseStatesplus(){
 		switch (mouseStates)
@@ -207,7 +216,7 @@ struct Mouse{
 
 	};
 
-	long mouseLastUP;
+	float mouseLastUP;
 	ControlPoint mouseFirstdMoving;
 	ControlPoint mouseLastValidMoving;
 	ControlPoint mouseLastStuff;
@@ -221,8 +230,8 @@ struct World{
 	int numberOfPoints;
 	Vector worldCenter;
 	Vector velocity;
-	long oldTime = 0.0;
-	long spacePush;
+	float oldTime;
+	float spacePush;
 
 	World(){
 		numberOfPoints = 0;
@@ -232,7 +241,7 @@ struct World{
 
 	}
 
-	void addCP(Vector pos, long time){
+	void addCP(Vector pos, float time){
 		if (numberOfPoints < 99){
 			points[numberOfPoints] = ControlPoint(pos + worldCenter, time);
 			numberOfPoints++;
@@ -362,13 +371,13 @@ struct World{
 		for (int i = 0; i < numberOfPoints - 1; ++i)
 		{
 			Vector a2, a3, a4;
-			a2 = points[i].acceleration / 2.0f;
+			a2 = points[i].acceleration / 2.0f ;
 			a3 = (points[i + 1].pos * 4.0 - points[i].pos * 4.0) / pow(points[i + 1].time - points[i].time, 3.0f)
 				- (points[i + 1].velocity + points[i].velocity * 3.0) / pow(points[i + 1].time - points[i].time, 2.0f)
-				- (points[i].acceleration) / (points[i + 1].time - points[i].time);
+				- (points[i].acceleration ) / (points[i + 1].time - points[i].time);
 			a4 = (points[i + 1].pos * -3.0 + points[i].pos * 3.0) / pow(points[i + 1].time - points[i].time, 4.0f)
 				+ (points[i + 1].velocity + points[i].velocity * 2.0) / pow(points[i + 1].time - points[i].time, 3.0f)
-				+ (points[i].acceleration * 0.5) / pow(points[i + 1].time - points[i].time, 2.0f);
+				+ (points[i].acceleration * 0.5 ) / pow(points[i + 1].time - points[i].time, 2.0f);
 
 			points[i + 1].acceleration = a4 * 12.0 * pow(points[i + 1].time - points[i].time, 2.0f)
 				+ a3 * 6.0 * (points[i + 1].time - points[i].time)
@@ -382,66 +391,81 @@ struct World{
 
 	void drawControlPoints(){
 		glColor3f(1.0f, 0.0f, 0.0f);
-		drawEllipse(Vector(150.0, 350.0, 0), 1, 1);
-		glColor3f(0.0f, 1.0f, 0.0f);
 		for (int i = 0; i < numberOfPoints; i++){
-			drawEllipse(points[i].pos, 1, 1);
+			drawEllipse(points[i].pos, 1.0f, 1.0f);
 
 		}
 	}
 
-	void drawBall(){
+	void drawBall(float timeNow){
 		if (spacePush != 0.0){
 			float dif = points[numberOfPoints-1].time - points[0].time;
-			float mar = fmod(glutGet(GLUT_ELAPSED_TIME) - spacePush , dif);
+			float mar = fmod(timeNow - spacePush, dif);
 
 			float time = mar + points[0].time;
 
 			int index = 0;
 			for (int i = 0; points[i].time < time; i++)
 				index = i;
+			if (index > 0){
+
+				int asder = 0;
+			}
 
 			Vector c = calculate(index, time);
-			glColor3f(0.0f, 0.0f, 1.0f);
-			drawEllipse(c, 1, 1);
-			printf("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa %lf , %lf\n", c.x,c.y);
+			glColor3f(0.0f, 1.0f, 0.0f);
+			drawEllipse(c, 1.0f, 1.0f);
+			printf("drawBall %lf , %lf , %lf\n", c.x,c.y, time);
+		
 		}
 
 	}
 
-	void move(long time){
+	void move(float time){
 
 
-		if (time - (oldTime + 10) > 0.0){
+		if (time - (oldTime + 0,01) > 0.0 && velocity.Length() != 0.0){
 			float distance = velocity.Length() *((time - oldTime) / 150.0);
 			if (velocity.Length() != 0.0){
-				printf("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa %lf\n", velocity.Length());
+				printf("move vel length %lf\n", velocity.Length());
 				float asd = velocity.Length();
 			}
-			oldTime += 10;
+			oldTime += 0, 01;
 			Vector asd = velocity.normalize();
 			asd = asd *distance;
-			worldCenter = worldCenter - asd;
+			printf("move diff %lf bb  %lf\n", asd.x , asd.y);
+			worldCenter = worldCenter + asd;
 			velocity = velocity *0.90;
 			if (velocity.Length() < 0.1) velocity = Vector(0.0, 0.0, 0.0);
 
-			glutPostRedisplay();
+			
 		}
 
 	}
-
-	void simulate(float now){
-
-
-		for (int i = oldTime; i < now; i = i + 10){
-			long diff = now - i;
-			long slice = (diff > 10) ? 10 : diff;
-			if (status == ballMoving){
-				drawBall();
-			}
+	void move2(float time){
+		if (velocity.Length() < 0.1){
+			velocity = Vector();
+			return;
 		}
+		Vector surolodas(velocity / velocity.Length());
+		surolodas = surolodas * -1.0f;
+		float mu = 0.85;
+		velocity = velocity * mu;
+
+		/*Vector x;
+		Vector a = velocity / time;
+		if (time < velocity / a)
+			x = worldCenter + velocity * time - a / 2 * time * time;
+		else  x = worldCenter + velocity * (velocity / a) * 0.5 ;
+
+
+		worldCenter = x;*/
+
+
 		glutPostRedisplay();
+
 	}
+	
 
 
 };
@@ -463,8 +487,8 @@ Color image[screenWidth*screenHeight];	// egy alkalmazás ablaknyi kép
 void onInitialization() {
 	glViewport(0, 0, screenWidth, screenHeight);
 	status = putCP;
-	mouse.mouseStates = mouse.B0CLK;
-	world.oldTime = glutGet(GLUT_ELAPSED_TIME);
+	mouse.mouseStates = B0CLK;
+	world.oldTime = glutGet(GLUT_ELAPSED_TIME) / 1000.0f;
 
 }
 
@@ -477,13 +501,11 @@ void onDisplay() {
 	glClearColor(0.3f, 0.3f, 0.3f, 1.0f);		// torlesi szin beallitasa
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // kepernyo torles
 
-	//world.move(glutGet(GLUT_ELAPSED_TIME));
 
 	world.drawControlPoints();
 	world.drawSpline();
 	if (status == ballMoving){
-		//world.
-		world.drawBall();
+		world.drawBall(glutGet(GLUT_ELAPSED_TIME) / 1000.0f);
 	}
 
 	glutSwapBuffers();     				// Buffercsere: rajzolas vege
@@ -497,7 +519,7 @@ void onKeyboard(unsigned char key, int x, int y) {
 		world.worldCenter = Vector(150.0f, 350.0f, 0.0f);
 	}
 	if (key == ' ' && world.spacePush == 0.0){
-		world.spacePush = glutGet(GLUT_ELAPSED_TIME);
+		world.spacePush = glutGet(GLUT_ELAPSED_TIME)/1000.0f;
 		status = ballMoving;
 
 	}
@@ -512,21 +534,21 @@ void onKeyboardUp(unsigned char key, int x, int y) {
 void doMouse(){
 	switch (mouse.mouseStates)
 	{
-	case mouse.B0CLK:
+	case B0CLK:
 		break;
-	case mouse.B1CLK: world.addCP(mouse.mouseLastStuff.pos, mouse.mouseLastStuff.time); mouse.mouseStates = mouse.B0CLK; glutPostRedisplay();
+	case B1CLK: world.addCP(mouse.mouseLastStuff.pos, mouse.mouseLastStuff.time); mouse.mouseStates = B0CLK; glutPostRedisplay();
 		break;
-	case mouse.B2CLK:
+	case B2CLK:
 		world.points[0].velocity = (mouse.mouseLastStuff.pos + world.worldCenter) - world.points[0].pos;
-		printf(" 2katt\n"); mouse.mouseStates = mouse.B0CLK; glutPostRedisplay();//do sebességvektor
+		printf(" 2katt\n"); mouse.mouseStates = B0CLK; glutPostRedisplay();//do sebességvektor
 		break;
-	case mouse.B3CLK:printf("3katt\n");
+	case B3CLK:printf("3katt\n");
 		world.points[0].acceleration = (mouse.mouseLastStuff.pos + world.worldCenter) - world.points[0].pos;
-		mouse.mouseStates = mouse.B0CLK; glutPostRedisplay();//do gyorsulásvektor
+		mouse.mouseStates = B0CLK; glutPostRedisplay();//do gyorsulásvektor
 		break;
 
-	case mouse.mouseMoving:
-		world.velocity = (mouse.mouseFirstdMoving.pos - mouse.mouseLastValidMoving.pos) * -0.3;
+	case mouseMoving:
+		world.velocity = (mouse.mouseFirstdMoving.pos - mouse.mouseLastValidMoving.pos) * 0.3;
 		//world.oldTime = glutGet(GLUT_ELAPSED_TIME); animacio miatt TODO
 
 		break;
@@ -545,17 +567,17 @@ void onMouse(int button, int state, int x, int y) {
 	}
 	if (button == GLUT_LEFT_BUTTON && state == GLUT_UP){
 		//if (moved == false){
-		if (mouse.mouseStates != mouse.mouseMoving){
+		if (mouse.mouseStates != mouseMoving){
 			mouse.mouseLastUP = glutGet(GLUT_ELAPSED_TIME);
+			mouse.mouseLastUP = mouse.mouseLastUP / 1000.0f;
 			mouse.mouseStatesplus();
-			long time = glutGet(GLUT_ELAPSED_TIME);
-			mouse.mouseLastStuff = ControlPoint(convertWinToGl(x, y), time);
+			mouse.mouseLastStuff = ControlPoint(convertWinToGl(x, y), mouse.mouseLastUP);
 			printf("%lf, %lf, katt gl\n", convertWinToGl(x, y).x, convertWinToGl(x, y).y);
 		}
 		else{//mouse.mouseStates = mouse.mouseMoving ban vagyunk
 			//mozgat
 			doMouse();
-			mouse.mouseStates = mouse.B0CLK;
+			mouse.mouseStates = B0CLK;
 		}
 
 	}
@@ -569,18 +591,22 @@ void onMouse(int button, int state, int x, int y) {
 // Eger mozgast lekezelo fuggveny
 void onMouseMotion(int x, int y)
 {
+
+	float time = glutGet(GLUT_ELAPSED_TIME) / 1000.0f;
 	//moved = true;
-	if (mouse.mouseStates != mouse.mouseMoving){
+	if (mouse.mouseStates != mouseMoving){
 		doMouse();
-		mouse.mouseFirstdMoving.time = glutGet(GLUT_ELAPSED_TIME); //save mouse pos, time
+		mouse.mouseFirstdMoving.time = time; //save mouse pos, time
 		mouse.mouseFirstdMoving.pos = Vector(convertWinToGl(x, y));
 
 	}
-	mouse.mouseStates = mouse.mouseMoving;
+	mouse.mouseStates = mouseMoving;
 	printf("%d,%d , mozog\n", x, y);
 
 	//utolso pos mentes
-	if (glutGet(GLUT_ELAPSED_TIME) - mouse.mouseFirstdMoving.time < 500){
+	
+
+	if (time - mouse.mouseFirstdMoving.time < 0.5){
 		mouse.mouseLastValidMoving.pos = Vector(convertWinToGl(x, y));
 
 	}
@@ -588,14 +614,13 @@ void onMouseMotion(int x, int y)
 
 // `Idle' esemenykezelo, jelzi, hogy az ido telik, az Idle esemenyek frekvenciajara csak a 0 a garantalt minimalis ertek
 void onIdle() {
-	long time = glutGet(GLUT_ELAPSED_TIME);		// program inditasa ota eltelt ido
+	float time = glutGet(GLUT_ELAPSED_TIME) / 1000.0f;		// program inditasa ota eltelt ido
 
-	//world.simulate(time);
-	//world.move(time);
-	//glutPostRedisplay();
 
-	world.oldTime = time;
-	if (time - mouse.mouseLastUP > 300 && mouse.mouseStates != mouse.B0CLK && mouse.mouseStates != mouse.mouseMoving)
+
+	world.move(time);
+
+	if (time - mouse.mouseLastUP > 0.3 && mouse.mouseStates != B0CLK && mouse.mouseStates != mouseMoving)
 		doMouse();
 
 	glutPostRedisplay();
